@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="https://thymeleaf.org"> 
+
+<head>
+<style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+</head>
+<body>
+
+
+<h2>Vendor Status</h2>   
+<table> 
+ <tr>
+    <th>content_id</th>
+    <th>retailer_id</th>
+    <th>rights_status</th>
+  </tr>   
+<tr>    
+<td><h4>content_id: </h4></td>    
+<td><h4 th:text="${content_id}"></h4></td>    
+</tr>    
+<tr>    
+<td><h4>retailer_id: </h4></td>    
+<td><h4 th:text="${retailer_id}"></h4></td>    
+</tr> 
+<tr>    
+<td><h4>rights_status: </h4></td>    
+<td><h4 th:text="${rights_status}"></h4></td>    
+</tr>    
+</table>    
+</html>  
