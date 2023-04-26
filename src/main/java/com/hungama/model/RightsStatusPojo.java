@@ -56,6 +56,13 @@ public class RightsStatusPojo
 		this.rights_status = rights_status;
 	}
 
+	public RightsStatusPojo(String contentId, String retailerId, String status) {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+
 
 	
 

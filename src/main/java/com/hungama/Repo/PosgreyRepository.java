@@ -35,7 +35,7 @@ public interface PosgreyRepository extends JpaRepository<PosGreyUserModel, Long>
 	int TranscodingSqsRequestCheck(Set<Integer> content_id);
 
 	@Query(value ="select content_id,retailer_id,rights_status from mvcms.tbl_content_rights_status where content_id in (:content_id)", nativeQuery = true)
-	List<String> RightsStatusCheck(Set<Integer> content_id);
+	List<String[]> RightsStatusCheck(Set<Integer> content_id);
 
 
 

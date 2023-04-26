@@ -1,12 +1,10 @@
 package com.hungama.service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,26 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.ModelAndView;
-
 import com.hungama.Repo.PosgreyRepository;
 import com.hungama.Repository.MysqlRepository;
 import com.hungama.TranscodingAndRightsAPICall.TranscodingAndRightsAPICall;
 import com.hungama.fileMap.FileMapApiCall;
-import com.hungama.model.RightsStatusPojo;
 import com.hungama.mysqlpojo.MoveFilePojo;
-import com.hungama.net.Http;
-
 @Controller
 @SpringBootApplication
 public class VendorStatus {
-	//public List<String> batchList = new ArrayList<String>();
-	public int deleteRawfileIdCount;
+
 	public String Album_id;
 	public String Track_id;
 	public List<String> status;
@@ -41,19 +30,13 @@ public class VendorStatus {
 	public int checkSqsRequestCount;
 	public ArrayList<String> getAlbumIdWithContentId;
 	public int getAlbumIdWithUpc;
-	public List<String> RightsStatusContentId = null;
-	Set<Integer> list = new HashSet<Integer>();
-	Set<Integer> userInput = new HashSet<Integer>();
-	Set<String> rightsList = new HashSet<String>();
-	String[] sepratedcontentList = null;
-	String contentId;
-	String RetailerId;
-	String Status;
-	List<RightsStatusPojo> batchList = new ArrayList<RightsStatusPojo>();
-
+	public List<String[]> rightsStatusContents = null;
+	public Set<Integer> list = new HashSet<Integer>();
+	public Set<Integer> userInput = new HashSet<Integer>();
+	public Set<String> rightsList = new HashSet<String>();
+	public String[] sepratedcontentList = null;
 	private static final Logger log = LogManager.getLogger(VendorStatus.class);
 
-	Http http = new Http();
 
 	@Autowired
 	PosgreyRepository posgreyRepository;
@@ -61,7 +44,8 @@ public class VendorStatus {
 	MysqlRepository mysqlRepository;
 
 	@RequestMapping(value = "/VendorStatus")
-	public String ServiceController(@RequestParam long content_id, Model model,HttpServletRequest request ) throws Exception {
+	public String ServiceController(@RequestParam long content_id, Model model)
+			throws Exception {
 		TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
 
 		log.info("content_id:->" + content_id);
@@ -77,8 +61,9 @@ public class VendorStatus {
 		}
 
 		// Input id is content_id
+		
+	//	List<Long> myList = List.of(Long.valueOf(content_id));
 		getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentId(content_id);
-
 		log.info(" AlbumId " + getAlbumIdWithContentId.size());
 		if (getAlbumIdWithContentId != null) {
 
@@ -247,47 +232,13 @@ public class VendorStatus {
 						log.info("checkSqsRequestCount " + checkSqsRequestCount);
 
 						if (checkSqsRequestCount == 0) {
-							String rightsAssignmentSuccess = transcodingAndRightsAPICall.doRightsAssigment(list);
-							log.info("Rights Api Call Successfully");
+							String apiStatus = transcodingAndRightsAPICall.doRightsAssigment(list);
+							log.info("apiStatus" +apiStatus);
 
-							RightsStatusContentId = posgreyRepository.RightsStatusCheck(list);
-							log.info("RightsStatusContentId " + RightsStatusContentId.size());
-
-							for (String getRightsdetails : RightsStatusContentId) {
-
-								sepratedcontentList = getRightsdetails.split(",");
-
-								 contentId = sepratedcontentList[0];
-								 RetailerId = sepratedcontentList[1];
-								 Status = sepratedcontentList[2];
-
-								   
-								   // model.addAttribute("contentId", contentId);
-									//model.addAttribute("RetailerId", RetailerId);
-									//model.addAttribute("Status", Status);
-									//model.addAttribute("myString", myString);
-								    
-								   // RightsStatusPojo pojo=new RightsStatusPojo();
-								  //  pojo.setContent_id(Integer.parseInt(contentId));
-								  //  pojo.setRetailer_id(Integer.parseInt(RetailerId));
-								   // pojo.setRights_status(Status);
-								    
-								//	model.addAttribute(pojo);
-
-									String message = "Hello, world!";
-									model.addAttribute("message", message);
-								    
-									log.info("contentId :-" + contentId);
-									log.info("RetailerId :-" + RetailerId);
-									log.info("Status :-" + Status);
-									
-															
-							}
+							rightsStatusContents = posgreyRepository.RightsStatusCheck(list);
+							model.addAttribute("rightsStatusContents", rightsStatusContents);
 							
-							return "VendorRightsStatus";		
-							
-
-						
+							return "VendorRightsStatus";
 
 						}
 
