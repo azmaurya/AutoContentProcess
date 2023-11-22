@@ -28,7 +28,9 @@ public class TranscodingAndRightsAPICall {
 		HttpResponse response = http.get(TranscodingAPI);
 
 		String responseStr = response.getResponseAsString();
-		if (response.getStatusCode() == 200) {
+		
+		if (response.getStatusCode() == 200) 
+		{
 
 			return "Transcoding Success";
 

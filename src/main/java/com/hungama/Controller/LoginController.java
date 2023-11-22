@@ -20,6 +20,40 @@ public class LoginController {
 		return "index";
 	}
 
+	@GetMapping("/InputForTranscoding")
+	public String InputForTranscoding()
+
+	{
+		
+		return "InputForTranscoding";
+	}
+
+	@GetMapping("/InputForTranscodingAndPurge2")
+	public String InputForTranscodingAndPurge()
+
+	{
+
+		return "InputForTranscodingAndPurge2";
+	}
+	
+	@GetMapping("/inputcontent")
+	public String BackFromRightsStatusPage()
+
+	{
+
+		return "inputcontent";
+	}
+
+	
+	@GetMapping("/Back")
+	public String BackFormTranscodeAndPurge()
+
+	{
+
+		return "inputcontent";
+	}
+
+	
 	@GetMapping("/connection")
 	public String WelcomePage(ModelMap model, @RequestParam String username, @RequestParam String password)
 
@@ -29,9 +63,9 @@ public class LoginController {
 
 		if (username.equals("admin") && password.equals("admin")) {
 
-			return "VendorName";
+			return "inputcontent";
 		} else {
-			return "LoginPage";
+			return "index";
 		}
 
 	}

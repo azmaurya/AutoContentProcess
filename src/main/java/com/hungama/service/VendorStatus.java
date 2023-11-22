@@ -1,10 +1,11 @@
 package com.hungama.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,24 +20,27 @@ import com.hungama.Repository.MysqlRepository;
 import com.hungama.TranscodingAndRightsAPICall.TranscodingAndRightsAPICall;
 import com.hungama.fileMap.FileMapApiCall;
 import com.hungama.mysqlpojo.MoveFilePojo;
+
 @Controller
 @SpringBootApplication
 public class VendorStatus {
 
+	public String[] sepratedListIdWithComma = null;
 	public String Album_id;
 	public String Track_id;
 	public List<String> status;
 	public ArrayList<String> inputContentId = new ArrayList<String>();
 	public int checkSqsRequestCount;
 	public ArrayList<String> getAlbumIdWithContentId;
+	public ArrayList<String> getTrackContentid;
 	public int getAlbumIdWithUpc;
 	public List<String[]> rightsStatusContents = null;
-	public Set<Integer> list = new HashSet<Integer>();
-	public Set<Integer> userInput = new HashSet<Integer>();
+	public List<String[]> rightsStatusPending = null;
 	public Set<String> rightsList = new HashSet<String>();
 	public String[] sepratedcontentList = null;
 	private static final Logger log = LogManager.getLogger(VendorStatus.class);
-
+	public static String transcodingSuccess;
+	public static Set<Integer> bulkTranscode;
 
 	@Autowired
 	PosgreyRepository posgreyRepository;
@@ -44,227 +48,428 @@ public class VendorStatus {
 	MysqlRepository mysqlRepository;
 
 	@RequestMapping(value = "/VendorStatus")
-	public String ServiceController(@RequestParam long content_id, Model model)
-			throws Exception {
+	public String ServiceController(@RequestParam String content_id, Model model) throws Exception {
 		TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
+		Set<Integer> getcontentlist = new HashSet<Integer>();
 
-		log.info("content_id:->" + content_id);
+		// log.info("content_id:->" + content);
+		// String[] splitInputcontent = content.split(",");
+		// for (String content_id : splitInputcontent) {
+		log.info(content_id);
 
 		String flag = "fail";
 
 		// Input id is UPC
 
-		if (String.valueOf(content_id).length() > 9) {
-			int upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(String.valueOf(content_id));
+		if (String.valueOf(content_id).length() > 9 && !content_id.contains(",")) {
+			Integer upc_albumid = null;
+			upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(String.valueOf(content_id));
+			/// int upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(content_id);
+			String s = "UPC not delivered";
+			if (upc_albumid == null) {
+				String msg = content_id + ". Upc has not delivered";
+				model.addAttribute("message", msg);
+				return "UPC_delivered_status";
+			}
+
 			log.info("upc_albumid:->" + upc_albumid);
-			content_id = upc_albumid;
+			content_id = String.valueOf(upc_albumid);
+
+		}
+
+		else if (content_id.contains(",")) {
+			List<Integer> list1 = Arrays.asList(content_id.split(",")).stream().map(s -> Integer.parseInt(s.trim()))
+					.collect(Collectors.toList());
+			bulkTranscode = new HashSet<>(list1);
+
+			List<Integer> arr = new ArrayList<>(list1);
+			// requestStatusCheckList = posgreyRepository.requestStatus(arr);
+			while (posgreyRepository.TranscodingSqsRequestBulkCheck(list1) > 0) {
+				// requestStatusCheckList = posgreyRepository.requestStatus(arr);
+				for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) {
+
+					if (posgreyRepository.requestStatus(arr).size() > 0) {
+
+						if (posgreyRepository.requestStatus(arr).size() > 0
+								&& posgreyRepository.requestStatus(arr).get(i).contains("FAILED")) {
+							log.info("requestStatusCheckList:FAILED: "
+									+ posgreyRepository.requestStatus(arr).get(i).split(",")[0]);
+							int callingUpdateQuery_Faild = posgreyRepository.Bulkupdatecount_faild(arr);
+							log.info("callingUpdateQuery_Faild  " + callingUpdateQuery_Faild);
+							transcodingSuccess = transcodingAndRightsAPICall.dotranscode(bulkTranscode);
+							Thread.sleep(120000);
+
+						}
+						if (posgreyRepository.requestStatus(arr).size() > 0
+								&& posgreyRepository.requestStatus(arr).get(i).contains("QUEUED")) {
+							log.info("requestStatusCheckList;QUEUED: "
+									+ posgreyRepository.requestStatus(arr).get(i).split(",")[0]);
+							transcodingSuccess = transcodingAndRightsAPICall.dotranscode(bulkTranscode);
+							Thread.sleep(120000);
+						}
+
+					}
+
+				}
+			}
+
+			if (posgreyRepository.TranscodingSqsRequestCheck(bulkTranscode) == 0) {
+				log.info("Rights Api Calling");
+				String apiStatus = transcodingAndRightsAPICall.doRightsAssigment(bulkTranscode);
+				log.info("apiStatus" + apiStatus);
+				rightsStatusContents = posgreyRepository.RightsStatusCheck(bulkTranscode);
+				model.addAttribute("rightsStatusContents", rightsStatusContents);
+				return "VendorRightsStatus";
+			}
+
 		}
 
 		// Input id is content_id
-		
-	//	List<Long> myList = List.of(Long.valueOf(content_id));
-		getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentId(content_id);
-		log.info(" AlbumId " + getAlbumIdWithContentId.size());
-		if (getAlbumIdWithContentId != null) {
 
-			String[] sepratedListIdWithComma = null;
+		// List<Long> myList = List.of(Long.valueOf(content_id));
+
+		getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentId(Long.valueOf(content_id));
+		log.info(" getAlbumIdWithContentId " + getAlbumIdWithContentId);
+
+		if (getAlbumIdWithContentId.isEmpty()) {
+			getTrackContentid = posgreyRepository.getTrackAlbumContentId(Long.valueOf(content_id));
+			log.info(" getTrackContentid " + getTrackContentid);
+
+			if (getTrackContentid != null) {
+
+				for (String getAlbumId : getTrackContentid) {
+
+					sepratedListIdWithComma = getAlbumId.toString().split(",");
+					getcontentlist.add(Integer.parseInt(sepratedListIdWithComma[0]));
+					getcontentlist.add(Integer.parseInt(sepratedListIdWithComma[1]));
+
+				}
+
+				log.info("getTrackContentidlist size::" + getcontentlist.size());
+			}
+
+		}
+
+		if (getAlbumIdWithContentId != null) {
 
 			for (String getAlbumId : getAlbumIdWithContentId) {
 
 				sepratedListIdWithComma = getAlbumId.toString().split(",");
-
-				list.add(Integer.parseInt(sepratedListIdWithComma[0]));
-				list.add(Integer.parseInt(sepratedListIdWithComma[1]));
+				getcontentlist.add(Integer.parseInt(sepratedListIdWithComma[0]));
+				getcontentlist.add(Integer.parseInt(sepratedListIdWithComma[1]));
 
 			}
-			log.info("list size::" + list.size());
+			log.info("getAlbumIdWithContentIdlist size::" + getcontentlist.size());
+		}
 
-			try {
+		try {
 
-				String contentCode = "", ddexVendor = "";
-				String dbDetails = null;
+			String contentCode = "", ddexVendor = "";
+			String dbDetails = null;
 
-				inputContentId = posgreyRepository.findByContentCode(content_id);
+			inputContentId = posgreyRepository.findByContentCode(Long.valueOf(content_id));
 
-				log.info("inputContentId " + inputContentId);
-				String checkIsDDEX = null;
-				String contentDetailsTest[] = inputContentId.get(0).split(",");
+			log.info("inputContentId " + inputContentId);
+			String checkIsDDEX = null;
+			String contentDetailsTest[] = inputContentId.get(0).split(",");
 
-				if (contentDetailsTest.length > 0) {
-					ddexVendor = contentDetailsTest[2];
-					checkIsDDEX = contentDetailsTest[3];
-					contentCode = contentDetailsTest[4];
+			if (contentDetailsTest.length > 0) {
+				ddexVendor = contentDetailsTest[2];
+				checkIsDDEX = contentDetailsTest[3];
+				contentCode = contentDetailsTest[4];
+
+			}
+			if (checkIsDDEX.equalsIgnoreCase("Content.DDEX")) {
+
+				switch (ddexVendor) {
+				case "The Orchard Enterprises":
+					status = mysqlRepository.getOrchardFileMapping(contentCode);
+					break;
+				case "IIP-DDS B.V":
+					status = mysqlRepository.getFugaFileMapping(contentCode);
+					break;
+				case "Believe SAS":
+					status = mysqlRepository.getBeliveFileMapping(contentCode);
+					break;
+				case "Universal Music Group":
+					status = mysqlRepository.getUniversalFileMapping(contentCode);
+					break;
+				case "ERIK Business Consultancy Services LLP":
+					status = mysqlRepository.geterikFileMapping(contentCode);
+					break;
+				case "Saregama India Ltd":
+					status = mysqlRepository.getSaregamaFileMapping(contentCode);
+					break;
+				case "T-Series":
+					status = mysqlRepository.getTSeriseFileMapping(contentCode);
+					break;
+				case "Warner Music Group":
+					status = mysqlRepository.getWarnerFileMapping(contentCode);
+					break;
+				case "Phonographic Digital Limited_Hungama":
+					status = mysqlRepository.getPhonographicFileMapping(contentCode);
+					break;
+				case "DPM Network Music Distribution":
+					status = mysqlRepository.getnuemetaFileMapping(contentCode);
+					break;
+				case "Zee Music Company_Hungama":
+					status = mysqlRepository.getzeelFileMapping(contentCode);
+					break;
+				case "One Digital Entertainment Pvt Ltd":
+					status = mysqlRepository.getonedigitalFileMapping(contentCode);
+					break;
+				case "Sony Music":
+					status = mysqlRepository.getSonyFileMapping(contentCode);
+					break;
+				case "Audio and Video Labs Inc. d/b/a CD Baby":
+					status = mysqlRepository.getcdbabyFileMapping(contentCode);
+					break;
+				case "INgrooves":
+					status = mysqlRepository.getINgroovesFileMapping(contentCode);
+					break;
 
 				}
-				if (checkIsDDEX.equalsIgnoreCase("Content.DDEX")) {
 
-					switch (ddexVendor) {
-					case "The Orchard Enterprises":
-						status = mysqlRepository.getOrchardFileMapping(contentCode);
-						break;
-					case "Zee Music Company_Hungama":
-						status = mysqlRepository.getFugaFileMapping(contentCode);
-						break;
-					case "Believe SAS":
-						status = mysqlRepository.getBeliveFileMapping(contentCode);
-						break;
-					case "Universal Music Group":
-						status = mysqlRepository.getUniversalFileMapping(contentCode);
-						break;
-					case "ERIK Business Consultancy Services LLP":
-						status = mysqlRepository.geterikFileMapping(contentCode);
-						break;
-					case "Saregama India Ltd":
-						status = mysqlRepository.getSaregamaFileMapping(contentCode);
-						break;
-					case "T-Series":
-						status = mysqlRepository.getTSeriseFileMapping(contentCode);
-						break;
-					case "Warner Music Group":
-						status = mysqlRepository.getWarnerFileMapping(contentCode);
-						break;
+				log.info("contentCode " + contentCode);
+				log.info("dbDetails " + dbDetails);
+				log.info("ddexVendor " + ddexVendor);
+
+				// status = mysqlRepository.getddexfilemappingstatus(contentCode);
+				log.info("status " + status.size());
+
+				if (status.size() > 0) {
+					List<MoveFilePojo> list = new ArrayList<>();
+
+					for (int i = 0; i < status.size(); i++) {
+						MoveFilePojo moveFilePojo = new MoveFilePojo();
+
+						String[] sArr = status.get(i).split(",");
+						log.info("status " + sArr[0]);
+
+						moveFilePojo.setId(Integer.parseInt(sArr[0]));
+						moveFilePojo.setContentCode(sArr[1]);
+						moveFilePojo.setSourcePath(sArr[2]);
+						moveFilePojo.setContentType(sArr[3]);
+						moveFilePojo.setContentSubType(sArr[4]);
+
+						list.add(moveFilePojo);
 
 					}
+					for (MoveFilePojo moveFilePojo1 : list) {
+						String FileMapApiCallSuccess = FileMapApiCall.call(moveFilePojo1);
+						log.info(" FileMapApiCall status " + FileMapApiCallSuccess);
 
-					log.info("contentCode " + contentCode);
-					log.info("dbDetails " + dbDetails);
-					log.info("ddexVendor " + ddexVendor);
+						long fileId = moveFilePojo1.getId();
+						if (FileMapApiCallSuccess.equals("Success")) {
 
-					// status = mysqlRepository.getddexfilemappingstatus(contentCode);
-					log.info("status " + status.size());
+							switch (ddexVendor) {
+							case "The Orchard Enterprises":
+								log.info("fileId " + fileId);
+								int deleteRawfileIdCount = mysqlRepository.getOrchardFileDelete((fileId));
+								log.info("deletefileIdCount " + deleteRawfileIdCount);
 
-					if (status.size() > 0) {
-						List<MoveFilePojo> list = new ArrayList<>();
+								break;
+							case "Zee Music Company_Hungama":
+								log.info("fileId " + fileId);
+								int getFugaFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
+								log.info("deletefileIdCount " + getFugaFileDelete);
 
-						for (int i = 0; i < status.size(); i++) {
-							MoveFilePojo moveFilePojo = new MoveFilePojo();
+								break;
+							case "Believe SAS":
+								log.info("fileId " + fileId);
+								int getBeliveFileMapping = mysqlRepository.getOrchardFileDelete((fileId));
+								log.info("deletefileIdCount " + getBeliveFileMapping);
 
-							String[] sArr = status.get(i).split(",");
-							log.info("status " + sArr[0]);
+								break;
+							case "Universal Music Group":
+								log.info("fileId " + fileId);
+								int getUniversalFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
+								log.info("deletefileIdCount " + getUniversalFileDelete);
 
-							moveFilePojo.setId(Integer.parseInt(sArr[0]));
-							moveFilePojo.setContentCode(sArr[1]);
-							moveFilePojo.setSourcePath(sArr[2]);
-							moveFilePojo.setContentType(sArr[3]);
-							moveFilePojo.setContentSubType(sArr[4]);
+								break;
 
-							list.add(moveFilePojo);
+							case "ERIK Business Consultancy Services LLP":
+								log.info("fileId " + fileId);
+								int geterikFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								log.info("deletefileIdCount " + geterikFileDelete);
 
-						}
-						for (MoveFilePojo moveFilePojo1 : list) {
-							String FileMapApiCallSuccess = FileMapApiCall.call(moveFilePojo1);
-							log.info(" FileMapApiCall status " + FileMapApiCallSuccess);
+								break;
 
-							long fileId = moveFilePojo1.getId();
-							if (FileMapApiCallSuccess.equals("Success")) {
+							case "Saregama India Ltd":
+								log.info("fileId " + fileId);
+								int getsaregamaFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								log.info("deletefileIdCount " + getsaregamaFileDelete);
 
-								switch (ddexVendor) {
-								case "The Orchard Enterprises":
-									log.info("fileId " + fileId);
-									int deleteRawfileIdCount = mysqlRepository.getOrchardFileDelete((fileId));
-									log.info("deletefileIdCount " + deleteRawfileIdCount);
+								break;
 
-									break;
-								case "Zee Music Company_Hungama":
-									log.info("fileId " + fileId);
-									int getFugaFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
-									log.info("deletefileIdCount " + getFugaFileDelete);
+							case "T-Series":
+								log.info("fileId " + fileId);
+								int getTSeriseFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								log.info("deletefileIdCount " + getTSeriseFileDelete);
 
-									break;
-								case "Believe SAS":
-									log.info("fileId " + fileId);
-									int getBeliveFileMapping = mysqlRepository.getOrchardFileDelete((fileId));
-									log.info("deletefileIdCount " + getBeliveFileMapping);
+								break;
 
-									break;
-								case "Universal Music Group":
-									log.info("fileId " + fileId);
-									int getUniversalFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
-									log.info("deletefileIdCount " + getUniversalFileDelete);
+							case "Warner Music Group":
+								log.info("fileId " + fileId);
+								int getWarnerFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								log.info("deletefileIdCount " + getWarnerFileDelete);
 
-									break;
+								break;
 
-								case "ERIK Business Consultancy Services LLP":
-									log.info("fileId " + fileId);
-									int geterikFileDelete = mysqlRepository.geterikFileDelete((fileId));
-									log.info("deletefileIdCount " + geterikFileDelete);
+							case "Phonographic Digital Limited_Hungama":
+								log.info("fileId " + fileId);
+								int getPhonographicFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								log.info("deletefileIdCount " + getPhonographicFileDelete);
 
-									break;
+								break;
 
-								case "Saregama India Ltd":
-									log.info("fileId " + fileId);
-									int getsaregamaFileDelete = mysqlRepository.geterikFileDelete((fileId));
-									log.info("deletefileIdCount " + getsaregamaFileDelete);
+							case "DPM Network Music Distribution":
+								log.info("fileId " + fileId);
+								int getDPMFileDelete = mysqlRepository.getDPMFileDelete((fileId));
+								log.info("deletefileIdCount " + getDPMFileDelete);
+								break;
 
-									break;
+							case "Zeel":
+								log.info("fileId " + fileId);
+								int getzeelFileDelete = mysqlRepository.getzeelFileDelete((fileId));
+								log.info("deletefileIdCount " + getzeelFileDelete);
+								break;
 
-								case "T-Series":
-									log.info("fileId " + fileId);
-									int getTSeriseFileDelete = mysqlRepository.geterikFileDelete((fileId));
-									log.info("deletefileIdCount " + getTSeriseFileDelete);
+							case "One Digital Entertainment Pvt Ltd":
+								log.info("fileId " + fileId);
+								int getonedigitalFileDelete = mysqlRepository.getonedigitalDelete((fileId));
+								log.info("deletefileIdCount " + getonedigitalFileDelete);
+								break;
 
-									break;
+							case "Sony Music":
+								log.info("fileId " + fileId);
+								int getsonyFileDelete = mysqlRepository.getsonyDelete((fileId));
+								log.info("deletefileIdCount " + getsonyFileDelete);
+								break;
 
-								case "Warner Music Group":
-									log.info("fileId " + fileId);
-									int getWarnerFileDelete = mysqlRepository.geterikFileDelete((fileId));
-									log.info("deletefileIdCount " + getWarnerFileDelete);
+							case "Audio and Video Labs Inc. d/b/a CD Baby":
+								log.info("fileId " + fileId);
+								int getcdbabyFileDelete = mysqlRepository.getcdbayDelete((fileId));
+								log.info("deletefileIdCount " + getcdbabyFileDelete);
+								break;
 
-									break;
-
-								}
+							case "INgrooves":
+								log.info("fileId " + fileId);
+								int getINgroovesDelete = mysqlRepository.getINgroovesDelete((fileId));
+								log.info("deletefileIdCount " + getINgroovesDelete);
+								break;
 
 							}
 
 						}
 
 					}
+
 				}
-				try {
-					if (list.size() > 0) {
+			}
+			try {
+				if (getAlbumIdWithContentId.size() > 0 || getTrackContentid.size() > 0) {
+					// checkSqsRequestCount = posgreyRepository.TranscodingSqsRequestCheck(list);
 
-						String transcodingSuccess = transcodingAndRightsAPICall.dotranscode(list);
+					List<Integer> arr = new ArrayList<>(getcontentlist);
+					// requestStatusCheckList = posgreyRepository.requestStatus(arr);
 
-						// Thread.sleep(300000);
+					for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) {
+						if (posgreyRepository.requestStatus(arr).get(i).contains("PENDING")) {
+							Set<Integer> targetSet = new HashSet<>(arr);
 
-						checkSqsRequestCount = posgreyRepository.TranscodingSqsRequestCheck(list);
-						log.info("Transcoding Api Call Successfully");
-						log.info("checkSqsRequestCount " + checkSqsRequestCount);
+							int callingUpdateQuery_pending = posgreyRepository.updatecount_pending(
+									Long.valueOf((posgreyRepository.requestStatus(arr).get(i).split(",")[0])));
+							rightsStatusPending = posgreyRepository.requestStatuspending(arr);
+							if (posgreyRepository.requestStatus(arr).size() > 0
+									&& posgreyRepository.requestStatus(arr).get(i).contains("FAILED")) {
+								int callingUpdateQuery_Faild = posgreyRepository.updatecount_faild(
+										Long.valueOf(posgreyRepository.requestStatus(arr).get(i).split(",")[0]));
+							}
+							transcodingSuccess = transcodingAndRightsAPICall.dotranscode(targetSet);
+							model.addAttribute("rightsStatusPending", rightsStatusPending);
+							return "RightsStatusPending";
+							// log.info("requestStatusCheckList:PENDING: " +
+							// posgreyRepository.requestStatus(arr));
+						}
+					}
 
-						if (checkSqsRequestCount == 0) {
-							String apiStatus = transcodingAndRightsAPICall.doRightsAssigment(list);
-							log.info("apiStatus" +apiStatus);
+					while (posgreyRepository.TranscodingSqsRequestCheck(getcontentlist) > 0) {
+						// requestStatusCheckList = posgreyRepository.requestStatus(arr);
+						for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) {
 
-							rightsStatusContents = posgreyRepository.RightsStatusCheck(list);
+							if (posgreyRepository.requestStatus(arr).size() > 0) {
+
+								if (posgreyRepository.requestStatus(arr).size() > 0
+										&& posgreyRepository.requestStatus(arr).get(i).contains("FAILED")) {
+									log.info("requestStatusCheckList:FAILED: "
+											+ posgreyRepository.requestStatus(arr).get(i).split(",")[0]);
+									int callingUpdateQuery_Faild = posgreyRepository.updatecount_faild(
+											Long.valueOf(posgreyRepository.requestStatus(arr).get(i).split(",")[0]));
+									log.info("callingUpdateQuery_Faild  " + callingUpdateQuery_Faild);
+									transcodingSuccess = transcodingAndRightsAPICall.dotranscode(getcontentlist);
+									Thread.sleep(120000);
+
+								}
+								if (posgreyRepository.requestStatus(arr).size() > 0
+										&& posgreyRepository.requestStatus(arr).get(i).contains("QUEUED")) {
+									log.info("requestStatusCheckList;QUEUED: "
+											+ posgreyRepository.requestStatus(arr).get(i).split(",")[0]);
+									transcodingSuccess = transcodingAndRightsAPICall.dotranscode(getcontentlist);
+									Thread.sleep(120000);
+								}
+								if (posgreyRepository.requestStatus(arr).size() > 0
+										&& posgreyRepository.requestStatus(arr).get(i).contains("INPROCESS")) {
+
+									continue;
+								}
+							}
+
+							else {
+								break;
+							}
+
+						}
+					}
+
+					log.info("checkSqsRequestCount " + checkSqsRequestCount);
+
+					// }
+					try {
+
+						if (posgreyRepository.TranscodingSqsRequestCheck(getcontentlist) == 0) {
+							log.info("Rights Api Calling");
+							String apiStatus = transcodingAndRightsAPICall.doRightsAssigment(getcontentlist);
+							log.info("apiStatus" + apiStatus);
+							rightsStatusContents = posgreyRepository.RightsStatusCheck(getcontentlist);
 							model.addAttribute("rightsStatusContents", rightsStatusContents);
-							
-							return "VendorRightsStatus";
+							return "VendorRightsStatus2";
 
 						}
 
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
 
-					log.info("Program Executed Successfully");
-					flag = "Success";
-					return "Success";
-
-				} catch (Exception e) {
-					e.printStackTrace();
-					flag = "fail";
 				}
 
-			} catch (NumberFormatException n) {
-				n.printStackTrace();
-			} catch (Exception ex) {
-				ex.printStackTrace();
 			}
 
-			// }
+			catch (Exception e) {
+				e.printStackTrace();
+				flag = "fail";
+			}
+
+		}
+
+		catch (NumberFormatException n) {
+			n.printStackTrace();
+		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
 
 		// }
-
-		return flag;
+		return null;
 
 	}
 
