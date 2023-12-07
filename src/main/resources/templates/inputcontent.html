@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--  <link rel="stylesheet" type="text/css" href="/css/main.css"> -->
+      <link rel="stylesheet" th:href="@{/css/main.css}"/>
+    <title>Login</title>
+</head>
+<body>
+
+<div class="topnav">
+  <a th:href="@{InputForTranscodingAndPurge2}">Transcoding And Purge</a>
+</div>
+
+    <div class="login-container">
+        <h2>Transcoding</h2>
+           <form class="input" action="VendorStatus">
+            <input class="input_ui" id="content_id" data-augmented-ui="border bl-clip tr-clip" type="text" name="content_id" placeholder="UPC/ContentId" required >
+            <button type="submit" data-augmented-ui="br-clip border">submit</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-package com.hungama.fileMap;
+package com.hungama.filemap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

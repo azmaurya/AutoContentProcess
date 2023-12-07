@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+ <!--  <link rel="stylesheet" type="text/css" href="/css/main.css"> -->
+      <link rel="stylesheet" th:href="@{/css/transcodeAndPurge.css}"/>
+       <!--  <script src="@{/js/Tpurge.js}"/> -->
+    <title>Purge</title>
+</head>
+<body>
+	    <div class="container">
+		<span th:text="${message}"></span>
+		<span th:text="${sucessjson}"></span>
+	   </div>
+	   <h3><a th:href="@{InputForTranscodingAndPurge2}">Back</a></h3>
+</body>
+</html>

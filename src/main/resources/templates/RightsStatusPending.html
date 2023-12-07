@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--  <link rel="stylesheet" type="text/css" href="/css/main.css"> -->
+<link rel="stylesheet" th:href="@{/css/rightsStatus.css}" />
+<title>Login</title>
+</head>
+<body>
+	<div class="container">
+		<h1>Transcoding Status</h1>
+		<table class="rwd-table">
+			<tbody>
+				<tr>
+					<th>Content Id</th>
+					<th>Rights Status</th>
+				</tr>
+				<tr th:each="contentspending : ${rightsStatusPending}">
+					<td th:text="${contentspending[0]}" />
+					<td th:text="${contentspending[1]}" />
+				</tr>
+			</tbody>
+		</table>
+		<h3><a th:href="@{inputcontent}">Back</a></h3>
+</body>
+
+</html>

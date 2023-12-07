@@ -1,9 +1,11 @@
 package com.hungama.service;
 
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -18,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.hungama.Repo.PosgreyRepository;
 import com.hungama.Repository.MysqlRepository;
 import com.hungama.TranscodingAndRightsAPICall.TranscodingAndRightsAPICall;
-import com.hungama.fileMap.FileMapApiCall;
+import com.hungama.filemap.FileMapApiCall;
 import com.hungama.mysqlpojo.MoveFilePojo;
 
 @Controller
@@ -41,7 +43,7 @@ public class VendorStatus {
 	private static final Logger log = LogManager.getLogger(VendorStatus.class);
 	public static String transcodingSuccess;
 	public static Set<Integer> bulkTranscode;
-
+	String timesleep = null;
 	@Autowired
 	PosgreyRepository posgreyRepository;
 	@Autowired
@@ -52,21 +54,46 @@ public class VendorStatus {
 		TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
 		Set<Integer> getcontentlist = new HashSet<Integer>();
 
-		// log.info("content_id:->" + content);
-		// String[] splitInputcontent = content.split(",");
-		// for (String content_id : splitInputcontent) {
 		log.info(content_id);
+		String UPC = null;
 
 		String flag = "fail";
+		List<Integer> contentIds = new ArrayList<>();
+		String[] arrOfStr = null;
+		String upc_albumidfrombatch = null;
 
+		// input id is batchId
+		if (content_id.contains("2023") || content_id.contains("2024"))
+		{
+			log.info("content_id " + content_id);
+			List<String> batch = mysqlRepository.getUPCFromBatchId(String.valueOf(content_id));
+			if (batch == null) 
+			{
+				String msg = content_id + ". Batch has not delivered";
+				model.addAttribute("message", msg);
+				return "UPC_delivered_status";
+			}
+			List<String> listupc = new ArrayList<String>();
+
+			for (int i = 0; i < batch.size(); i++)
+			{
+				arrOfStr = batch.get(i).toString().split("/");
+				log.info("UPC " + arrOfStr[6]);
+
+				upc_albumidfrombatch = posgreyRepository.getAlbumTrackIdWithbatch(String.valueOf(arrOfStr[6]));
+				contentIds.add(Integer.parseInt(upc_albumidfrombatch));
+			}
+		}
 		// Input id is UPC
 
-		if (String.valueOf(content_id).length() > 9 && !content_id.contains(",")) {
+		else if (String.valueOf(content_id).length() > 9
+				&& !(content_id.contains("2023") || content_id.contains("2024") || content_id.contains(","))) {
 			Integer upc_albumid = null;
 			upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(String.valueOf(content_id));
 			/// int upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(content_id);
 			String s = "UPC not delivered";
-			if (upc_albumid == null) {
+			if (upc_albumid == null) 
+			{
 				String msg = content_id + ". Upc has not delivered";
 				model.addAttribute("message", msg);
 				return "UPC_delivered_status";
@@ -74,7 +101,7 @@ public class VendorStatus {
 
 			log.info("upc_albumid:->" + upc_albumid);
 			content_id = String.valueOf(upc_albumid);
-
+			log.info("content_id  " + content_id);
 		}
 
 		else if (content_id.contains(",")) {
@@ -128,8 +155,22 @@ public class VendorStatus {
 
 		// List<Long> myList = List.of(Long.valueOf(content_id));
 
-		getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentId(Long.valueOf(content_id));
-		log.info(" getAlbumIdWithContentId " + getAlbumIdWithContentId);
+		// getAlbumIdWithContentId =
+		// posgreyRepository.getAlbumTrackContentId(Long.valueOf(content_id));
+		// log.info(" getAlbumIdWithContentId " + getAlbumIdWithContentId);
+
+		if (content_id.contains("2023") || content_id.contains("2024")) {
+			getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentIdFortseries(contentIds);
+			log.info(" getAlbumIdWithContentId " + getAlbumIdWithContentId);
+
+			inputContentId = posgreyRepository.findByContentCode(Long.valueOf(upc_albumidfrombatch));
+
+		} else {
+			getAlbumIdWithContentId = posgreyRepository.getAlbumTrackContentId(Long.valueOf(content_id));
+			log.info(" getAlbumIdWithContentId " + getAlbumIdWithContentId);
+
+			inputContentId = posgreyRepository.findByContentCode(Long.valueOf(content_id));
+		}
 
 		if (getAlbumIdWithContentId.isEmpty()) {
 			getTrackContentid = posgreyRepository.getTrackAlbumContentId(Long.valueOf(content_id));
@@ -166,8 +207,6 @@ public class VendorStatus {
 
 			String contentCode = "", ddexVendor = "";
 			String dbDetails = null;
-
-			inputContentId = posgreyRepository.findByContentCode(Long.valueOf(content_id));
 
 			log.info("inputContentId " + inputContentId);
 			String checkIsDDEX = null;
@@ -209,9 +248,11 @@ public class VendorStatus {
 				case "Phonographic Digital Limited_Hungama":
 					status = mysqlRepository.getPhonographicFileMapping(contentCode);
 					break;
+
 				case "DPM Network Music Distribution":
-					status = mysqlRepository.getnuemetaFileMapping(contentCode);
+					status = mysqlRepository.getDPMFileMapping(contentCode);
 					break;
+
 				case "Zee Music Company_Hungama":
 					status = mysqlRepository.getzeelFileMapping(contentCode);
 					break;
@@ -271,19 +312,19 @@ public class VendorStatus {
 								break;
 							case "Zee Music Company_Hungama":
 								log.info("fileId " + fileId);
-								int getFugaFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
-								log.info("deletefileIdCount " + getFugaFileDelete);
-
+								int getzeelFileDelete = mysqlRepository.getzeelFileDelete((fileId));
+								log.info("deletefileIdCount " + getzeelFileDelete);
 								break;
+
 							case "Believe SAS":
 								log.info("fileId " + fileId);
-								int getBeliveFileMapping = mysqlRepository.getOrchardFileDelete((fileId));
-								log.info("deletefileIdCount " + getBeliveFileMapping);
+								int getBeliveFileDelete = mysqlRepository.getBeliveFileDelete((fileId));
+								log.info("deletefileIdCount " + getBeliveFileDelete);
 
 								break;
 							case "Universal Music Group":
 								log.info("fileId " + fileId);
-								int getUniversalFileDelete = mysqlRepository.getOrchardFileDelete((fileId));
+								int getUniversalFileDelete = mysqlRepository.getUniversalFileDelete((fileId));
 								log.info("deletefileIdCount " + getUniversalFileDelete);
 
 								break;
@@ -297,28 +338,28 @@ public class VendorStatus {
 
 							case "Saregama India Ltd":
 								log.info("fileId " + fileId);
-								int getsaregamaFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								int getsaregamaFileDelete = mysqlRepository.getSaregamaFileDelete((fileId));
 								log.info("deletefileIdCount " + getsaregamaFileDelete);
 
 								break;
 
 							case "T-Series":
 								log.info("fileId " + fileId);
-								int getTSeriseFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								int getTSeriseFileDelete = mysqlRepository.getTSeriseFileDelete((fileId));
 								log.info("deletefileIdCount " + getTSeriseFileDelete);
 
 								break;
 
 							case "Warner Music Group":
 								log.info("fileId " + fileId);
-								int getWarnerFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								int getWarnerFileDelete = mysqlRepository.getWarnerFileDelete((fileId));
 								log.info("deletefileIdCount " + getWarnerFileDelete);
 
 								break;
 
 							case "Phonographic Digital Limited_Hungama":
 								log.info("fileId " + fileId);
-								int getPhonographicFileDelete = mysqlRepository.geterikFileDelete((fileId));
+								int getPhonographicFileDelete = mysqlRepository.getPhonographicFileDelete((fileId));
 								log.info("deletefileIdCount " + getPhonographicFileDelete);
 
 								break;
@@ -329,10 +370,10 @@ public class VendorStatus {
 								log.info("deletefileIdCount " + getDPMFileDelete);
 								break;
 
-							case "Zeel":
+							case "IIP-DDS B.V":
 								log.info("fileId " + fileId);
-								int getzeelFileDelete = mysqlRepository.getzeelFileDelete((fileId));
-								log.info("deletefileIdCount " + getzeelFileDelete);
+								int getFugaFileDelete = mysqlRepository.getFugaFileDelete((fileId));
+								log.info("deletefileIdCount " + getFugaFileDelete);
 								break;
 
 							case "One Digital Entertainment Pvt Ltd":
@@ -443,7 +484,7 @@ public class VendorStatus {
 							log.info("apiStatus" + apiStatus);
 							rightsStatusContents = posgreyRepository.RightsStatusCheck(getcontentlist);
 							model.addAttribute("rightsStatusContents", rightsStatusContents);
-							return "VendorRightsStatus2";
+							return "VendorRightsStatus";
 
 						}
 

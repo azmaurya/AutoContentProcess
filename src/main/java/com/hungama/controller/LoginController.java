@@ -1,4 +1,4 @@
-package com.hungama.Controller;
+package com.hungama.controller;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

@@ -1,0 +1,107 @@
+/* Reset default margin and padding */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Apply styles to the body or container if needed */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  text-align: center;
+}
+
+/* Style for spans */
+span {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+}
+
+/* Hover effects for spans */
+span:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for message span */
+span.message {
+  background-color: #3498db; /* Classic blue */
+  color: #fff; /* White text */
+  font-weight: bold;
+}
+
+/* Style for successjson span */
+span.successjson {
+  background-color: #27ae60; /* Emerald green */
+  color: #fff; /* White text */
+}
+
+h3 {
+  display: inline-block;
+  position: relative;
+  text-align: center;
+  font-size: 1.5em;
+  color: #cecece;
+}
+h3:before {
+  content: "\25C0";
+  position: absolute;
+  left: -50px;
+  -webkit-animation: leftRight 2s linear infinite;
+  animation: leftRight 2s linear infinite;
+}
+h3:after {
+  content: "\25b6";
+  position: absolute;
+  right: -50px;
+  -webkit-animation: leftRight 2s linear infinite reverse;
+  animation: leftRight 2s linear infinite reverse;
+}
+@-webkit-keyframes leftRight {
+  0%    { -webkit-transform: translateX(0)}
+  25%   { -webkit-transform: translateX(-10px)}
+  75%   { -webkit-transform: translateX(10px)}
+  100%  { -webkit-transform: translateX(0)}
+}
+@keyframes leftRight {
+  0%    { transform: translateX(0)}
+  25%   { transform: translateX(-10px)}
+  75%   { transform: translateX(10px)}
+  100%  { transform: translateX(0)}
+}
+
+/*
+    Don't look at this last part. It's unnecessary. I was just playing with pixel gradients... Don't judge.
+*/
+/*
+@media screen and (max-width: 601px) {
+  .rwd-table tr {
+    background-image: -webkit-linear-gradient(left, #428bca 137px, #f5f9fc 1px, #f5f9fc 100%);
+    background-image: -moz-linear-gradient(left, #428bca 137px, #f5f9fc 1px, #f5f9fc 100%);
+    background-image: -o-linear-gradient(left, #428bca 137px, #f5f9fc 1px, #f5f9fc 100%);
+    background-image: -ms-linear-gradient(left, #428bca 137px, #f5f9fc 1px, #f5f9fc 100%);
+    background-image: linear-gradient(left, #428bca 137px, #f5f9fc 1px, #f5f9fc 100%);
+  }
+  .rwd-table tr:nth-child(odd) {
+    background-image: -webkit-linear-gradient(left, #428bca 137px, #ebf3f9 1px, #ebf3f9 100%);
+    background-image: -moz-linear-gradient(left, #428bca 137px, #ebf3f9 1px, #ebf3f9 100%);
+    background-image: -o-linear-gradient(left, #428bca 137px, #ebf3f9 1px, #ebf3f9 100%);
+    background-image: -ms-linear-gradient(left, #428bca 137px, #ebf3f9 1px, #ebf3f9 100%);
+    background-image: linear-gradient(left, #428bca 137px, #ebf3f9 1px, #ebf3f9 100%);
+  }
+}*/

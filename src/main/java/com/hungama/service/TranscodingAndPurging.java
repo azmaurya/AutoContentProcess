@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.hungama.Repo.PosgreyRepository;
 import com.hungama.TranscodingAndRightsAPICall.TranscodingAndRightsAPICall;
 import com.hungama.net.HttpException;
-import com.hungama.purgeApi.PurgeApiCall;
+import com.hungama.purgeapi.PurgeApiCall;
 
 @Controller
 @SpringBootApplication

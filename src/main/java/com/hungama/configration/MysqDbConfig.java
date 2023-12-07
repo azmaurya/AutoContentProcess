@@ -19,7 +19,11 @@ import com.hungama.service.VendorStatus;
 
 @Configuration
 @EnableJpaRepositories(basePackages = {"com.hungama.Repository"}, entityManagerFactoryRef = "mysqlEntityManagerFactory", transactionManagerRef = "mysqlTransactionManager")
-public class MysqDbConfig {	  private static final Logger log = LogManager.getLogger(VendorStatus.class);
+public class MysqDbConfig 
+
+{	
+	
+	private static final Logger log = LogManager.getLogger(VendorStatus.class);
 
 	
   @Value("${spring.datasource.driverClassName}")

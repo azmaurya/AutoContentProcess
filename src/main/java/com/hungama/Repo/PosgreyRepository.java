@@ -27,6 +27,9 @@ public interface PosgreyRepository extends JpaRepository<PosGreyUserModel, Long>
 	ArrayList<String> getAlbumTrackContentId(long content_id);
 	
 	@Query(value ="select package_content_id,content_id from mvcms.TBL_Package_content_map where package_content_id in(:content_id)", nativeQuery = true)
+	ArrayList<String> getAlbumTrackContentIdFortseries(List<Integer> content_id);
+	
+	@Query(value ="select package_content_id,content_id from mvcms.TBL_Package_content_map where package_content_id in(:content_id)", nativeQuery = true)
     ArrayList<String> getAlbumTrackContentIdbatch(List<Integer> content_id);
 	
 	@Query(value ="select package_content_id,content_id from mvcms.TBL_Package_content_map where package_content_id in(:content_id)", nativeQuery = true)
@@ -38,6 +41,9 @@ public interface PosgreyRepository extends JpaRepository<PosGreyUserModel, Long>
 
 	@Query(value ="select content_id from mvcms.TBL_contents where original_content_code=:content_id", nativeQuery = true)
 	Integer getAlbumTrackIdWithUPC(String content_id);
+	
+	@Query(value ="select content_id from mvcms.TBL_contents where original_content_code=:content_id", nativeQuery = true)
+	String  getAlbumTrackIdWithbatch(String content_id);
 	
 	
 	@Query(value ="select count(*) cnt from mvcms.tbl_sqs_requests s inner join mvcms.tbl_content_files cf on s.raw_file_id = cf.file_id\n"

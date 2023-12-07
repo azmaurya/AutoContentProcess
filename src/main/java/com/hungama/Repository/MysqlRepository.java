@@ -13,7 +13,8 @@ import com.hungama.UserModel.MysqlUserModel;
 @Repository
 public interface MysqlRepository extends JpaRepository<MysqlUserModel, Long>
 {
-	
+	@Query(value="select urlPath from tseries.TBL_TSERIES_S3_UPLOAD  WHERE urlPath like lower(concat('%', concat(:contentCode, '%.xml')))" , nativeQuery = true)
+	List<String> getUPCFromBatchId(String contentCode);
 	
 	@Query(value="select id,contentCode,path,type,subType from orchard.TBL_ORCHARD_S3_MOVEFILE where status='Y' and lower(contentCode) like lower(concat('%', concat(:contentCode, '%')))" , nativeQuery = true)
 	List<String> getOrchardFileMapping(String contentCode);
@@ -94,7 +95,7 @@ public interface MysqlRepository extends JpaRepository<MysqlUserModel, Long>
 	int getPhonographicFileDelete(long fileId);
 	
 	@Query(value="select id,contentCode,path,type,subType from dpmnetworks.TBL_DPMNETWORK_S3_MOVEFILE where status='Y' and lower(contentCode) like lower(concat('%', concat(:contentCode, '%')))" , nativeQuery = true)
-	List<String> getnuemetaFileMapping(String contentCode);
+	List<String> getDPMFileMapping(String contentCode);
 	@Transactional
 	@Modifying
 	@Query(value="delete from dpmnetworks.TBL_DPMNETWORK_S3_MOVEFILE where id=:fileId", nativeQuery = true)
