@@ -55,7 +55,14 @@ public interface PosgreyRepository extends JpaRepository<PosGreyUserModel, Long>
 			+ "where s.content_id in (:content_id)", nativeQuery = true)
 	int TranscodingSqsRequestBulkCheck(List<Integer> content_id);
 
-	@Query(value ="select content_id,retailer_id,rights_status from mvcms.tbl_content_rights_status where content_id in (:content_id)", nativeQuery = true)
+	//@Query(value ="select content_id,retailer_id,rights_status from mvcms.tbl_content_rights_status where content_id in (:content_id) and ", nativeQuery = true)
+	//List<String[]> RightsStatusCheck(Set<Integer> content_id);
+	
+	@Query(value ="select distinct crs.content_id,crs.rights_status,crs.retailer_id,cd.content_title,cta.start_date \n"
+			+ "from mvcms.mvcms.tbl_content_rights_status crs\n"
+			+ "inner join mvcms.mvcms.tbl_content_details cd on crs.content_id=cd.content_id\n"
+			+ "inner join mvcms.mvcms.tbl_content_terr_agreements cta on crs.content_id=cta.content_id\n"
+			+ "where crs.content_id in(:content_id)and crs.retailer_id in(1242);", nativeQuery = true)
 	List<String[]> RightsStatusCheck(Set<Integer> content_id);
 
 

@@ -12,13 +12,17 @@
 			<tbody>
 				<tr>
 					<th>Content Id</th>
-					<th>Retailer Id</th>
 					<th>Rights Status</th>
+					<th>Retailer Id</th>
+					<th>Content Title </th>
+					<th>Live Time Metasea</th>
 				</tr>
 				<tr th:each="contents : ${rightsStatusContents}">
 					<td th:text="${contents[0]}" />
 					<td th:text="${contents[1]}" />
 					<td th:text="${contents[2]}" />
+					<td th:text="${contents[3]}" />
+					<td th:text="${contents[4]}" />
 				</tr>
 			</tbody>
 		</table>
