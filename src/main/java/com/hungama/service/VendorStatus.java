@@ -69,6 +69,8 @@ public class VendorStatus {
 			List<String> batch = mysqlRepository.getUPCFromBatchId(String.valueOf(content_id));
 			if (batch == null) 
 			{
+				
+				
 				String msg = content_id + ". Batch has not delivered";
 				model.addAttribute("message", msg);
 				return "UPC_delivered_status";
