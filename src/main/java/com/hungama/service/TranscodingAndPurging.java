@@ -32,8 +32,6 @@ public class TranscodingAndPurging {
 	public static String transcodingSuccess;
 	private static final Logger log = LogManager.getLogger(TranscodingAndPurging.class);
 	public static String retunrJson;
-	TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
-	PurgeApiCall purgeApiCall = new PurgeApiCall();
 	public static int checkSqsRequestCount = 0;
 	public static ArrayList<String> requestStatusCheckList = new ArrayList<String>();
 
@@ -46,6 +44,10 @@ public class TranscodingAndPurging {
 			throws HttpException, IOException, InterruptedException, ParseException
 
 	{
+		TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
+		PendingToQueued pendingToQueued = new PendingToQueued();
+		PurgeApiCall purgeApiCall = new PurgeApiCall();
+		
 		log.info("transcodeAndPurge_list " + list);
 		checkSqsRequestCount = posgreyRepository.TranscodingSqsRequestCheck(list);
 		List<Integer> integerList = new ArrayList<>(list);
@@ -60,8 +62,19 @@ public class TranscodingAndPurging {
 					
 					if (posgreyRepository.requestStatus(integerList).size() > 0) 
 					{
+						if (posgreyRepository.requestStatus(integerList).get(i).contains("PENDING")) 
+						{
+							// Set<Integer> targetSet = new HashSet<>(arr);
 
-						if (posgreyRepository.requestStatus(integerList).size() > 0 && posgreyRepository.requestStatus(integerList).get(i).contains("FAILED")) {
+							int callingUpdateQuery_pending = posgreyRepository.updatecount_pending(
+									Long.valueOf((posgreyRepository.requestStatus(integerList).get(i).split(",")[0])));
+
+							pendingToQueued.pendingToQue(integerList);
+						}
+
+
+						if (posgreyRepository.requestStatus(integerList).size() > 0 && posgreyRepository.requestStatus(integerList).get(i).contains("FAILED")) 
+						{
 							log.info("requestStatusCheckList:FAILED: "
 									+ posgreyRepository.requestStatus(integerList).get(i).split(",")[0]);
 							int callingUpdateQuery_Faild = posgreyRepository.updatecount_faild(

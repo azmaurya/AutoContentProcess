@@ -1,5 +1,11 @@
 package com.hungama.service;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -14,36 +20,27 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class DataBaseConnection 
 {
 
-	public static Connection getconnection() throws ClassNotFoundException, SQLException
-	{
-	
-		 Connection connection = null;
-		  
-		  String url = "jdbc:postgresql://34.86.84.35:5432/mvcms";
-	   	  Properties props = new Properties();
-	   	  props.setProperty("user","hungama");
-	   	  props.setProperty("password","WQHd*TyT*2%sol-c4(WdUM)oiD%gsX");
-	 
-	   	  connection = DriverManager.getConnection(url, props);
-	   	  return connection;
-	
-		}	
-	
-	public  static Connection getmysqlconnection() throws SQLException, ClassNotFoundException 
-	{
-		
-		Connection connection = null;
-		//String url="jdbc:mysql://35.245.83.228:3306/emi";
-		String url="jdbc:mysql://35.245.83.228:3306/wbclient";
-		//String url="jdbc:mysql://35.245.83.228:3306/orchard";
-		Properties props = new Properties();
-		props.setProperty("user", "dadclient");
-		props.setProperty("password", "y@ntr@");
-		
-		connection = DriverManager.getConnection(url, props);
-		return connection;
-	 }
+	 public static void main(String[] args) throws Exception {
+	        String url = "http://34.86.122.205:86/ImageTranscoding/StartImageTranscoding";
+	        String transcodingIds = "106579170"; // Replace with actual transcoding IDs
 
+	        URL apiUrl = new URL(url);
+	        HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
+	        connection.setRequestMethod("POST");
+	        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+	        connection.setDoOutput(true);
+
+	        String postData = "TranscodingIds=" + transcodingIds;
+	        try (OutputStream os = connection.getOutputStream()) {
+	            byte[] input = postData.getBytes(StandardCharsets.UTF_8);
+	            os.write(input, 0, input.length);
+	        }
+
+	        int responseCode = connection.getResponseCode();
+	        System.out.println("Response Code: " + responseCode);
+
+	        // Handle the response here if needed
+	    }
 	
 
 }

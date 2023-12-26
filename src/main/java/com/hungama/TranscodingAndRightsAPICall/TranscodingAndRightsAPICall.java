@@ -44,7 +44,8 @@ public class TranscodingAndRightsAPICall {
 
 	}
 
-	public String doRightsAssigment(Set<Integer> content_id) throws HttpException, IOException {
+	public String doRightsAssigment(Set<Integer> content_id) throws HttpException, IOException 
+	{
 		Http http = new Http();
 		// calling Transcoding API
 		String RightsApi = "http://34.86.122.205:8080/RightsAssign/Create?contentId=" + content_id.toString().replaceAll("(^\\[|\\]$)", "") + "";

@@ -62,6 +62,7 @@ public class MysqDbConfig
     properties.put("hibernate.show_sql", this.SHOW_SQL);
     em.setJpaPropertyMap(properties);
     return em;
+   
   }
   
   @Bean

@@ -44,6 +44,8 @@ public class VendorStatus {
 	public static String transcodingSuccess;
 	public static Set<Integer> bulkTranscode;
 	String timesleep = null;
+	String[] multipleBatch = null;
+
 	@Autowired
 	PosgreyRepository posgreyRepository;
 	@Autowired
@@ -52,6 +54,8 @@ public class VendorStatus {
 	@RequestMapping(value = "/VendorStatus")
 	public String ServiceController(@RequestParam String content_id, Model model) throws Exception {
 		TranscodingAndRightsAPICall transcodingAndRightsAPICall = new TranscodingAndRightsAPICall();
+		PendingToQueued pendingToQueued = new PendingToQueued();
+
 		Set<Integer> getcontentlist = new HashSet<Integer>();
 
 		log.info(content_id);
@@ -61,25 +65,45 @@ public class VendorStatus {
 		List<Integer> contentIds = new ArrayList<>();
 		String[] arrOfStr = null;
 		String upc_albumidfrombatch = null;
+		List<String> UrlpathFrombatch = null;
+		List<String> stringList = new ArrayList<>();
 
 		// input id is batchId
-		if (content_id.contains("2023") || content_id.contains("2024"))
-		{
+		if (content_id.contains("2023") || content_id.contains("2024")) {
 			log.info("content_id " + content_id);
-			List<String> batch = mysqlRepository.getUPCFromBatchId(String.valueOf(content_id));
-			if (batch == null) 
-			{
-				
-				
-				String msg = content_id + ". Batch has not delivered";
+
+			String[] multipleBatch = content_id.split(",");
+			for (String batch : multipleBatch) {
+				log.info("Batch: " + batch);
+
+				// log.info("multipleBatch[i] "+multipleBatch[i]);
+
+				UrlpathFrombatch = mysqlRepository.getUPCFromBatchId(String.valueOf(batch));
+
+				log.info("UrlpathFrombatch " + UrlpathFrombatch);
+				log.info("UrlpathFrombatch " + UrlpathFrombatch.size());
+
+				String[] urls = UrlpathFrombatch.toString().split(", ");
+				for (String url : urls) {
+					log.info("url " + url);
+					stringList.add(url.trim());
+				}
+				log.info("Number of elements in stringList: " + stringList.size());
+
+				UrlpathFrombatch.stream();
+
+			}
+
+			if (UrlpathFrombatch == null) {
+				String msg = content_id + ".Batch has not delivered";
 				model.addAttribute("message", msg);
 				return "UPC_delivered_status";
 			}
-			List<String> listupc = new ArrayList<String>();
 
-			for (int i = 0; i < batch.size(); i++)
-			{
-				arrOfStr = batch.get(i).toString().split("/");
+			// List<String> listupc = new ArrayList<String>();
+
+			for (int i = 0; i < stringList.size(); i++) {
+				arrOfStr = stringList.get(i).toString().split("/");
 				log.info("UPC " + arrOfStr[6]);
 
 				upc_albumidfrombatch = posgreyRepository.getAlbumTrackIdWithbatch(String.valueOf(arrOfStr[6]));
@@ -94,8 +118,7 @@ public class VendorStatus {
 			upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(String.valueOf(content_id));
 			/// int upc_albumid = posgreyRepository.getAlbumTrackIdWithUPC(content_id);
 			String s = "UPC not delivered";
-			if (upc_albumid == null) 
-			{
+			if (upc_albumid == null) {
 				String msg = content_id + ". Upc has not delivered";
 				model.addAttribute("message", msg);
 				return "UPC_delivered_status";
@@ -117,6 +140,17 @@ public class VendorStatus {
 				// requestStatusCheckList = posgreyRepository.requestStatus(arr);
 				for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) {
 
+					if (posgreyRepository.requestStatus(arr).get(i).contains("PENDING")) 
+					{
+						// Set<Integer> targetSet = new HashSet<>(arr);
+
+						int callingUpdateQuery_pending = posgreyRepository.updatecount_pending(
+								Long.valueOf((posgreyRepository.requestStatus(arr).get(i).split(",")[0])));
+
+						pendingToQueued.pendingToQue(arr);
+
+					}
+
 					if (posgreyRepository.requestStatus(arr).size() > 0) {
 
 						if (posgreyRepository.requestStatus(arr).size() > 0
@@ -136,7 +170,6 @@ public class VendorStatus {
 							transcodingSuccess = transcodingAndRightsAPICall.dotranscode(bulkTranscode);
 							Thread.sleep(120000);
 						}
-
 					}
 
 				}
@@ -270,6 +303,9 @@ public class VendorStatus {
 				case "INgrooves":
 					status = mysqlRepository.getINgroovesFileMapping(contentCode);
 					break;
+				case "Sanjivani Digital Entertainment Pvt Ltd":
+					status = mysqlRepository.getSanjivaniFileMapping(contentCode);
+					break;
 
 				}
 
@@ -401,6 +437,12 @@ public class VendorStatus {
 								int getINgroovesDelete = mysqlRepository.getINgroovesDelete((fileId));
 								log.info("deletefileIdCount " + getINgroovesDelete);
 								break;
+								
+							case "Sanjivani Digital Entertainment Pvt Ltd":
+								log.info("fileId " + fileId);
+								int getSanjivaniDelete = mysqlRepository.getSanjivaniDelete((fileId));
+								log.info("deletefileIdCount " + getSanjivaniDelete);
+								break;
 
 							}
 
@@ -417,24 +459,31 @@ public class VendorStatus {
 					List<Integer> arr = new ArrayList<>(getcontentlist);
 					// requestStatusCheckList = posgreyRepository.requestStatus(arr);
 
-					for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) {
-						if (posgreyRepository.requestStatus(arr).get(i).contains("PENDING")) {
-							Set<Integer> targetSet = new HashSet<>(arr);
+					for (int i = 0; posgreyRepository.requestStatus(arr).size() > i; i++) 
+					{
+						if (posgreyRepository.requestStatus(arr).get(i).contains("PENDING")) 
+						{
+							// Set<Integer> targetSet = new HashSet<>(arr);
 
 							int callingUpdateQuery_pending = posgreyRepository.updatecount_pending(
 									Long.valueOf((posgreyRepository.requestStatus(arr).get(i).split(",")[0])));
-							rightsStatusPending = posgreyRepository.requestStatuspending(arr);
-							if (posgreyRepository.requestStatus(arr).size() > 0
-									&& posgreyRepository.requestStatus(arr).get(i).contains("FAILED")) {
-								int callingUpdateQuery_Faild = posgreyRepository.updatecount_faild(
-										Long.valueOf(posgreyRepository.requestStatus(arr).get(i).split(",")[0]));
-							}
-							transcodingSuccess = transcodingAndRightsAPICall.dotranscode(targetSet);
-							model.addAttribute("rightsStatusPending", rightsStatusPending);
-							return "RightsStatusPending";
-							// log.info("requestStatusCheckList:PENDING: " +
-							// posgreyRepository.requestStatus(arr));
+
+							pendingToQueued.pendingToQue(arr);
+
 						}
+
+						// rightsStatusPending = posgreyRepository.requestStatuspending(arr);
+
+						if (posgreyRepository.requestStatus(arr).size() > 0
+								&& posgreyRepository.requestStatus(arr).get(i).contains("FAILED")) {
+							int callingUpdateQuery_Faild = posgreyRepository.updatecount_faild(
+									Long.valueOf(posgreyRepository.requestStatus(arr).get(i).split(",")[0]));
+						}
+						// transcodingSuccess = transcodingAndRightsAPICall.dotranscode(targetSet);
+						// return "RightsStatusPending";
+						// log.info("requestStatusCheckList:PENDING: " +
+						// posgreyRepository.requestStatus(arr));
+
 					}
 
 					while (posgreyRepository.TranscodingSqsRequestCheck(getcontentlist) > 0) {
@@ -460,11 +509,6 @@ public class VendorStatus {
 											+ posgreyRepository.requestStatus(arr).get(i).split(",")[0]);
 									transcodingSuccess = transcodingAndRightsAPICall.dotranscode(getcontentlist);
 									Thread.sleep(120000);
-								}
-								if (posgreyRepository.requestStatus(arr).size() > 0
-										&& posgreyRepository.requestStatus(arr).get(i).contains("INPROCESS")) {
-
-									continue;
 								}
 							}
 

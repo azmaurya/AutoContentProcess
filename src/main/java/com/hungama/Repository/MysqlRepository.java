@@ -139,6 +139,13 @@ public interface MysqlRepository extends JpaRepository<MysqlUserModel, Long>
 	@Query(value="delete from ingrooves.TBL_INGROOVES_S3_MOVEFILE where id=:fileId", nativeQuery = true)
 	int getINgroovesDelete(long fileId);
 	
+	@Query(value="select id,contentCode,path,type,subType from sanjivani.TBL_SANJIVANI_S3_MOVEFILE where status='Y' and lower(contentCode) like lower(concat('%', concat(:contentCode, '%')))" , nativeQuery = true)
+	List<String> getSanjivaniFileMapping(String contentCode);
+	@Transactional
+	@Modifying
+	@Query(value="delete from ingrooves.TBL_INGROOVES_S3_MOVEFILE where id=:fileId", nativeQuery = true)
+	int getSanjivaniDelete(long fileId);
+	
 	
 	
 	
